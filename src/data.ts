@@ -1,37 +1,58 @@
-export const input = [
-    {
-         "from": "00:00",
-        "to": "23:58",
-        "action": "jamie"
-    },
-    {
-        "from": "03:00",
-        "to": "05:00",
-        "action": "cl"
-    },
-    {
-        "from": "04:00",
-        "to": "06:00",
-        "action": "open"
-    },
-    {
-        "from": "08:00",
-        "to": "17:00",
-        "action": "open"
-    },
-    {
-        "from": "10:00",
-        "to": "12:00",
-        "action": "busy"
-    },
-    {
-        "from": "14:00",
-        "to": "15:00",
-        "action": "open"
-    },
-    {
-        "from": "15:00",
-        "to": "17:30",
-        "action": "quiet"
-    }
-]
+import { TTimeTableFormatted } from './model';
+
+export const input: TTimeTableFormatted[] = [
+  {
+    fromTime: '09:00',
+    action: 'SetTeamStatus',
+    toTime: '10:30',
+    status: 'busy',
+    source: 'team',
+    importance: 10,
+    type: 'exception',
+  },
+  {
+    fromTime: '09:00',
+    action: 'SetTeamStatus',
+    toTime: '12:00',
+    status: 'steady',
+    source: 'branch',
+    importance: 9,
+    type: 'exception',
+  },
+  {
+    fromTime: '12:00',
+    action: 'SetTeamStatus',
+    toTime: '17:00',
+    status: 'quiet',
+    source: 'branch',
+    importance: 9,
+    type: 'exception',
+  },
+  {
+    fromTime: '13:05',
+    action: 'SetTeamStatus',
+    toTime: '13:06',
+    status: 'busy',
+    source: 'team',
+    importance: 10,
+    type: 'exception',
+  },
+  {
+    fromTime: '14:00',
+    action: 'SetTeamStatus',
+    toTime: '16:00',
+    status: 'steady',
+    source: 'branch',
+    importance: 4,
+    type: 'standard',
+  },
+  {
+    fromTime: '15:35',
+    action: 'SetTeamStatus',
+    toTime: '16:00',
+    status: 'steady',
+    source: 'branch',
+    importance: 4,
+    type: 'standard',
+  },
+];

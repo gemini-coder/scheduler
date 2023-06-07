@@ -1,113 +1,161 @@
-import { input } from "./data";
+import { log } from 'console';
+import { input } from './data';
+import { TTimeTableFormatted } from './model';
 
-type Task = {
-    from: string;
-    to: string;
-    action: string;
-    status?: string
-}
+class TimetableGenerator {
+  processedTasks: TTimeTableFormatted[] = [];
 
-const processedTasks: Task[] = []
+  process() {
+    const tasks: TTimeTableFormatted[] = input;
 
-function process(){
-    
-    const tasks: Task[] = input
-
-    const defaultTask = {
-        action: "closed"
-    }
-
-    const getNextChronologicalTask = (time: string) => {
-        return tasks.find((x) => x.from > time)
-    }
+    const defaultStatus = 'closed';
 
     tasks.map((task, index) => {
-        if(index === 0){
-            if(task.from > '00:00'){
-                processedTasks.push({
-                    from: '00:00',
-                    to: task.from,
-                    action: defaultTask.action,
-                    status: "adhoc"
-             
-                })
-            }
+      if (index === 0) {
+        if (task.fromTime > '00:00') {
+          this.processedTasks.push({
+            importance: 0,
+            source: 'adhoc',
+            status: defaultStatus,
+            fromTime: '00:00',
+            toTime: task.fromTime,
+            action: 'SetTeamStatus',
+            type: 'adhoc',
+          });
         }
-        const whattodo = ap(tasks, task);
-        console.log('----------------');
-            
+      }
+      this.ap(tasks, task);
+      console.log('----------------');
+    });
 
-    })
-    console.log(processedTasks);
-}
+    console.log(this.processedTasks);
 
-/**
- * This should work. Can create some test cases against them
- * @param allTasks 
- * @param task 
- * @returns 
- */
-function ap(allTasks: Task[], task: Task): void {
+    return this.processedTasks;
+  }
+
+  /**
+   * This should work. Can create some test cases against them
+   * @param allTasks
+   * @param task
+   * @returns
+   */
+  ap(allTasks: TTimeTableFormatted[], task: TTimeTableFormatted): void {
     // Find next task
-    const nextTask = allTasks.find((x) => x.from > task.from)
+    const nextTask = allTasks.find((x) => x.fromTime > task.fromTime);
     console.log('ThisTask', task);
-    
-    if(nextTask){
-        console.log('NextTask', nextTask);
-        if(nextTask.from == task.to){
-            // The next task follows directly on from this one
-            // Send back as normal
-            addToTasks( {...task, status: 'original_1'})
-            return;
-        } else if (nextTask.from < task.to){
-            // This task ends after the next starts, we need to modify the end of this one
-            addToTasks({...task, to: nextTask.from, status: 'adjusted_2'})
+
+    if (nextTask) {
+      console.log('NextTask', nextTask);
+      if (nextTask.fromTime == task.toTime) {
+        // The next task follows directly on from this one
+        // Send back as normal
+        this.addToTasks({ ...task });
+        return;
+      } else if (nextTask.fromTime < task.toTime) {
+        // This task ends after the next starts, we need to modify the end of this one
+        this.addToTasks({
+          ...task,
+          toTime: nextTask.fromTime,
+          type: 'adjusted',
+        });
+      } else {
+        // Next task does not fit directly on the end
+        // Let's see whether there is one that can be popped in between then
+        const fitIn = allTasks.find(
+          (x) => x.fromTime <= task.fromTime && x.toTime > task.toTime
+        );
+        if (fitIn) {
+          // We have found one that can fit in
+          this.addToTasks({ ...task });
+          this.addToTasks({
+            ...fitIn,
+            fromTime: task.toTime,
+            toTime: nextTask.fromTime,
+            type: 'fitin_1',
+          });
         } else {
-            // Next task does not fit directly on the end
-            // Let's see whether there is one that can be popped in between then
-            const fitIn = allTasks.find((x) => x.from <= task.from && x.to > task.to)
-            if(fitIn){
-                // We have found one that can fit in
-                addToTasks( {...task, status: 'original_2'})
-                addToTasks( {...fitIn, from: task.to, to: nextTask.from, status: 'fitin_1'})
-            } else {
-                // We need to add the default values as an inbetween
-                addToTasks({...task, status: 'original_3'})
-                addToTasks({from: task.to, to: nextTask.from, action: 'closed', status: "default_1"})
-            }
-            
+          // We need to add the default values as an inbetween
+          this.addToTasks({ ...task });
+          this.addToTasks({
+            action: 'SetTeamStatus',
+            importance: 0,
+            source: 'adhoc',
+            fromTime: task.toTime,
+            toTime: nextTask.fromTime,
+            status: 'closed',
+            type: 'default_1',
+          });
         }
+      }
     } else {
-        // This is the last task.
-        // Check whether it takes you up to midnight
-        addToTasks({...task, status: 'original_4'})
-        if(task.to < '23:59'){
-            // See if there is one that can fit in
-            const fitIn = allTasks.find((x) => x.from <= task.from && task.to >= task.to)
-            if(fitIn){
-                if(fitIn.to < "23:59"){
-                    // We have found one, but it doesn't go to the end of day
-                    addToTasks({...fitIn, from: task.to, to: fitIn.to, status: 'fitIn_2'})
-                    addToTasks({from: fitIn.to, to: '23:59', action: 'closed', status: 'default_2'})
-                } else if(fitIn.to == "23:59"){
-                    // We have found one that goes to the end of the day
-                    addToTasks({...fitIn, from: task.to, status: 'fitIn_3'})
-                } else {
-                    addToTasks({from: fitIn.to, to: '23:59', action: 'closed', status: 'default_3'})
-                }
-            } else {
-                addToTasks({from: task.to, to: '23:59', action: 'closed', status: 'default_4'})
-            }
-            
+      // This is the last task.
+      // Check whether it takes you up to midnight
+      this.addToTasks({ ...task });
+      if (task.toTime < '23:59') {
+        // See if there is one that can fit in
+        const fitIn = allTasks.find(
+          (x) => x.fromTime <= task.fromTime && task.toTime >= task.toTime
+        );
+        if (fitIn) {
+          if (fitIn.toTime < '23:59') {
+            // We have found one, but it doesn't go to the end of day
+            this.addToTasks({
+              ...fitIn,
+              fromTime: task.toTime,
+              toTime: fitIn.toTime,
+              type: 'fitIn_2',
+            });
+            this.addToTasks({
+              action: 'SetTeamStatus',
+              importance: 0,
+              source: 'adhoc',
+              fromTime: fitIn.toTime,
+              toTime: '23:59',
+              status: 'closed',
+              type: 'default_2',
+            });
+          } else if (fitIn.toTime == '23:59') {
+            // We have found one that goes to the end of the day
+            this.addToTasks({
+              ...fitIn,
+              fromTime: task.toTime,
+              type: 'fitIn_3',
+            });
+          } else {
+            this.addToTasks({
+              action: 'SetTeamStatus',
+              importance: 0,
+              source: 'adhoc',
+              fromTime: fitIn.toTime,
+              toTime: '23:59',
+              status: 'closed',
+              type: 'default_3',
+            });
+          }
+        } else {
+          this.addToTasks({
+            action: 'SetTeamStatus',
+            importance: 0,
+            source: 'adhoc',
+            fromTime: task.toTime,
+            toTime: '23:59',
+            status: 'closed',
+            type: 'default_4',
+          });
         }
+      }
     }
-}
+  }
 
-function addToTasks(task: Task): void {
+  addToTasks(task: TTimeTableFormatted): void {
     console.log('Creating', task);
-    processedTasks.push(task)
+    this.processedTasks.push(task);
+  }
 }
 
-export default process()
+const start = () => {
+  console.log('running');
+  new TimetableGenerator().process();
+};
 
-
+export default start();
