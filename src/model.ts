@@ -5,15 +5,11 @@ export type TTimeTableTask = {
   status: string;
 };
 
-export type TType =
-  | 'standard'
-  | 'exception'
-  | 'adjusted'
-  | 'adhoc'
-  | 'delete'
-  | string;
+export type TType = 'standard' | 'exception' | 'adjusted' | 'adhoc' | 'delete';
 
-export type TTimeTableFormatted = TTimeTableTask & {
+export type TTimeTableFormatted = {
+  fromTime: string;
+  action: string;
   type: TType;
   info?: string;
   importance: number; // 0 least, 10 most

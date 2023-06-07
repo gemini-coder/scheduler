@@ -28,7 +28,7 @@ class TimetableGenerator {
       console.log('----------------');
     });
 
-    console.log(this.processedTasks);
+    console.log(JSON.stringify(this.processedTasks));
 
     return this.processedTasks;
   }
@@ -41,23 +41,48 @@ class TimetableGenerator {
    */
   ap(allTasks: TTimeTableFormatted[], task: TTimeTableFormatted): void {
     // Find next task
-    const nextTask = allTasks.find((x) => x.fromTime > task.fromTime);
-    console.log('ThisTask', task);
+    const nextTask = allTasks.find(
+      (x) =>
+        x.fromTime > task.fromTime ||
+        (x.fromTime == task.fromTime && x.toTime > task.toTime)
+    );
+    console.log('ThisTask', JSON.stringify(task));
 
     if (nextTask) {
-      console.log('NextTask', nextTask);
+      console.log('NextTask', JSON.stringify(nextTask));
       if (nextTask.fromTime == task.toTime) {
         // The next task follows directly on from this one
         // Send back as normal
-        this.addToTasks({ ...task });
+        // Making sure that the next task does not interfere with this task as we may have created last time
+        if (
+          nextTask.fromTime! >= task.fromTime &&
+          nextTask.toTime! <= task.toTime
+        ) {
+          this.addToTasks({ ...task, type: 'original_1' });
+        }
+
         return;
       } else if (nextTask.fromTime < task.toTime) {
         // This task ends after the next starts, we need to modify the end of this one
-        this.addToTasks({
-          ...task,
-          toTime: nextTask.fromTime,
-          type: 'adjusted',
-        });
+
+        if (nextTask.toTime > task.toTime) {
+            // The next task starts before this one ends, but ends after this one ends, so need to clip the next taks and add it after this one
+          this.addToTasks({
+            ...task,
+            type: 'original_5',
+          });
+          this.addToTasks({
+            ...nextTask,
+            fromTime: task.toTime,
+            type: 'adjusted_5',
+          });
+        } else {
+          this.addToTasks({
+            ...task,
+            toTime: nextTask.fromTime,
+            type: 'adjusted_1',
+          });
+        }
       } else {
         // Next task does not fit directly on the end
         // Let's see whether there is one that can be popped in between then
@@ -66,7 +91,7 @@ class TimetableGenerator {
         );
         if (fitIn) {
           // We have found one that can fit in
-          this.addToTasks({ ...task });
+          this.addToTasks({ ...task, type: 'original_2' });
           this.addToTasks({
             ...fitIn,
             fromTime: task.toTime,
@@ -75,7 +100,7 @@ class TimetableGenerator {
           });
         } else {
           // We need to add the default values as an inbetween
-          this.addToTasks({ ...task });
+          this.addToTasks({ ...task, type: 'original_3' });
           this.addToTasks({
             action: 'SetTeamStatus',
             importance: 0,
@@ -90,11 +115,11 @@ class TimetableGenerator {
     } else {
       // This is the last task.
       // Check whether it takes you up to midnight
-      this.addToTasks({ ...task });
+      this.addToTasks({ ...task, type: 'original_4' });
       if (task.toTime < '23:59') {
         // See if there is one that can fit in
         const fitIn = allTasks.find(
-          (x) => x.fromTime <= task.fromTime && task.toTime >= task.toTime
+          (x) => x.fromTime <= task.fromTime && x.toTime >= task.toTime
         );
         if (fitIn) {
           if (fitIn.toTime < '23:59') {
@@ -110,7 +135,7 @@ class TimetableGenerator {
               importance: 0,
               source: 'adhoc',
               fromTime: fitIn.toTime,
-              toTime: '23:59',
+              toTime: '24:00',
               status: 'closed',
               type: 'default_2',
             });
@@ -127,7 +152,7 @@ class TimetableGenerator {
               importance: 0,
               source: 'adhoc',
               fromTime: fitIn.toTime,
-              toTime: '23:59',
+              toTime: '24:00',
               status: 'closed',
               type: 'default_3',
             });
@@ -138,7 +163,7 @@ class TimetableGenerator {
             importance: 0,
             source: 'adhoc',
             fromTime: task.toTime,
-            toTime: '23:59',
+            toTime: '24:00',
             status: 'closed',
             type: 'default_4',
           });
@@ -148,8 +173,11 @@ class TimetableGenerator {
   }
 
   addToTasks(task: TTimeTableFormatted): void {
-    console.log('Creating', task);
-    this.processedTasks.push(task);
+    console.log('Creating', JSON.stringify(task));
+    const i = this.processedTasks.indexOf(task);
+    if (i < 0) {
+      this.processedTasks.push(task);
+    }
   }
 }
 
